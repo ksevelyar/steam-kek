@@ -25,32 +25,35 @@
           config,
           ...
         }: let
-          printerAgenixKey = pkgs.writeText "printer-agenix-key" (builtins.readFile /home/ksevelyar/.ssh/guest_ed25519_key);
+          hostAgenixKey = pkgs.writeText "host-agenix-key" (builtins.readFile /home/ksevelyar/.ssh/guest_ed25519_key);
         in {
           imports = [
             (modulesPath + "/installer/sd-card/sd-image.nix")
             (modulesPath + "/profiles/minimal.nix")
           ];
 
-          environment.etc."ssh/printer-agenix-key" = {
+          environment.etc."ssh/host-agenix-key" = {
             source = /home/ksevelyar/.ssh/guest_ed25519_key;
             mode = "0600";
           };
 
           age = {
-            identityPaths = ["/etc/ssh/printer-agenix-key"];
+            identityPaths = ["/etc/ssh/host-agenix-key"];
             secrets.wifi.file = ./secrets/wifi.age;
             secrets.root-password.file = ./secrets/root-password.age;
           };
 
           boot = {
             consoleLogLevel = 1;
+            kernelParams = [
+              "console=ttyS0,115200n8"
+              "console=tty0"
+            ];
             loader = {
               grub.enable = false;
               generic-extlinux-compatible.enable = true;
               generic-extlinux-compatible.configurationLimit = 1;
             };
-            # kernelParams = ["console=tty0"];
             initrd.availableKernelModules = [
               "xhci_pci"
               "usbhid"
@@ -59,8 +62,20 @@
             supportedFilesystems = lib.mkForce ["vfat" "ext4"];
           };
 
+          hardware.deviceTree = {
+            enable = true;
+            name = "allwinner/sun50i-h618-orangepi-zero2w.dtb";
+          };
+
+          system.build.uboot = pkgs.buildUBoot {
+            defconfig = "orangepi_zero2w_defconfig";
+            extraMeta.platforms = ["aarch64-linux"];
+            env.BL31 = "${pkgs.armTrustedFirmwareAllwinnerH616}/bl31.bin";
+            filesToInstall = ["u-boot-sunxi-with-spl.bin"];
+          };
+
           documentation.enable = false;
-          documentation.man.generateCaches = false;
+          documentation.man.cache.enable = false;
           services.lvm.enable = false;
 
           environment.systemPackages = with pkgs; [
@@ -134,8 +149,6 @@
 
             set temp (cat /sys/devices/virtual/thermal/thermal_zone0/temp 2>/dev/null)
             test -n "$temp"; and echo "🌡️ "(math -s 0 "$temp / 1000")"C"
-
-            watch -n1 ip a
           '';
 
           users.mutableUsers = false;
@@ -161,10 +174,10 @@
           networking = {
             networkmanager.wifi.powersave = false;
             usePredictableInterfaceNames = false;
-            hostName = "printer";
+            hostName = "steam-kek";
 
-            useDHCP = false;
-            interfaces.wlan0.useDHCP = true;
+            useDHCP = true;
+            # interfaces.wlan0.useDHCP = true;
 
             wireless = {
               enable = true;
