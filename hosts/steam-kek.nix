@@ -137,6 +137,7 @@ in
     kernelParams = [
       "console=tty1"
       "console=ttyS0,115200n8"
+      "usbcore.autosuspend=-1"
     ];
     kernelModules = [ "sprdwl_ng" ];
     initrd = {
@@ -252,6 +253,41 @@ in
   };
 
   systemd.services.avahi-daemon.serviceConfig.SystemCallFilter = lib.mkForce [ ];
+
+  systemd.services.usb-host-rescan = {
+    description = "Rescan USB1 host devices after PHY initialization";
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "local-fs.target"
+      "systemd-modules-load.service"
+    ];
+    path = [ pkgs.coreutils ];
+    unitConfig.ConditionPathExists = "/sys/bus/platform/devices/5200000.usb";
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = pkgs.writeShellScript "usb-host-rescan" ''
+        set -eu
+
+        if [ -L /sys/bus/platform/devices/5200000.usb/driver ]; then
+          printf '5200000.usb' > /sys/bus/platform/drivers/ehci-platform/unbind
+        fi
+        if [ -L /sys/bus/platform/devices/5200400.usb/driver ]; then
+          printf '5200400.usb' > /sys/bus/platform/drivers/ohci-platform/unbind
+        fi
+
+        sleep 1
+        printf '5200400.usb' > /sys/bus/platform/drivers/ohci-platform/bind
+        sleep 1
+        printf '5200000.usb' > /sys/bus/platform/drivers/ehci-platform/bind
+
+        for powerControlPath in /sys/bus/platform/devices/5200*.usb/usb*/power/control; do
+          [ -e "$powerControlPath" ] || continue
+          printf 'on' > "$powerControlPath"
+        done
+      '';
+    };
+  };
 
   users = {
     mutableUsers = false;
