@@ -76,6 +76,20 @@ let
       DRM_SUN4I = yes;
       DRM_SUN8I_DW_HDMI = yes;
       DRM_SUN8I_MIXER = yes;
+      IP6_NF_MATCH_RPFILTER = module;
+      IP_NF_MATCH_RPFILTER = module;
+      NETFILTER_XT_MATCH_PKTTYPE = module;
+      NF_TABLES = module;
+      NF_TABLES_INET = yes;
+      NF_TABLES_IPV4 = yes;
+      NF_TABLES_IPV6 = yes;
+      NFT_COMPAT = module;
+      NFT_CT = module;
+      NFT_LOG = module;
+      NFT_REJECT = module;
+      NFT_REJECT_INET = module;
+      NFT_REJECT_IPV4 = module;
+      NFT_REJECT_IPV6 = module;
       SND_SUN4I_CODEC = module;
       SPARD_WLAN_SUPPORT = yes;
       SUN50I_H6_PRCM_PPU = yes;
@@ -192,6 +206,8 @@ in
 
   environment.systemPackages = with pkgs; [
     rsync
+    retroarch
+    libretro.mesen
     lm_sensors
     powertop
     vim
@@ -230,7 +246,15 @@ in
 
   system.stateVersion = "25.11";
 
+  security.rtkit.enable = true;
+
   services = {
+    pipewire = {
+      enable = true;
+      alsa.enable = true;
+      pulse.enable = true;
+      wireplumber.enable = true;
+    };
     openssh = {
       enable = true;
       startWhenNeeded = false;
