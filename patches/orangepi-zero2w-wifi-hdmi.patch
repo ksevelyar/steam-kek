@@ -1,0 +1,126 @@
+From: User <user@localhost>
+Subject: arm64: dts: orangepi-zero2w: enable UWE5622 and HDMI
+
+Keep the board changes limited to the peripherals used by this image. The
+wiring and regulator delays match Armbian's sunxi-6.18 board support.
+---
+ .../dts/allwinner/sun50i-h618-orangepi-zero2w.dts | 59 ++++++++++++++++++++++
+ 1 file changed, 59 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero2w.dts b/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero2w.dts
+index 5d12d6d1b693..75fa5d2ba79e 100644
+--- a/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero2w.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero2w.dts
+@@ -24,6 +24,17 @@ chosen {
+ 		stdout-path = "serial0:115200n8";
+ 	};
+ 
++	connector {
++		compatible = "hdmi-connector";
++		type = "d";
++
++		port {
++			hdmi_con_in: endpoint {
++				remote-endpoint = <&hdmi_out_con>;
++			};
++		};
++	};
++
+ 	leds {
+ 		compatible = "gpio-leds";
+ 
+@@ -52,6 +63,23 @@ reg_vcc3v3: vcc3v3 {
+ 		vin-supply = <&reg_vcc5v>;
+ 		regulator-always-on;
+ 	};
++
++	reg_vcc_wifi_io: vcc-wifi-io {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc-wifi-io";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-always-on;
++		vin-supply = <&reg_vcc3v3>;
++	};
++
++	wifi_pwrseq: wifi-pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		clocks = <&rtc 1>;
++		clock-names = "osc32k-out";
++		reset-gpios = <&pio 6 18 GPIO_ACTIVE_LOW>; /* PG18 */
++		post-power-on-delay-ms = <200>;
++	};
+ };
+ 
+ &codec {
+@@ -59,10 +87,25 @@ &codec {
+ 	status = "okay";
+ };
+ 
++&de {
++	status = "okay";
++};
++
+ &cpu0 {
+ 	cpu-supply = <&reg_dcdc2>;
+ };
+ 
++&hdmi {
++	hvcc-supply = <&reg_aldo1>;
++	status = "okay";
++};
++
++&hdmi_out {
++	hdmi_out_con: endpoint {
++		remote-endpoint = <&hdmi_con_in>;
++	};
++};
++
+ &ehci1 {
+ 	status = "okay";
+ };
+@@ -81,6 +124,16 @@ &mmc0 {
+ 	status = "okay";
+ };
+ 
++&mmc1 {
++	vmmc-supply = <&reg_vcc3v3>;
++	vqmmc-supply = <&reg_vcc_wifi_io>;
++	mmc-pwrseq = <&wifi_pwrseq>;
++	bus-width = <4>;
++	non-removable;
++	mmc-ddr-1_8v;
++	status = "okay";
++};
++
+ &ohci1 {
+ 	status = "okay";
+ };
+@@ -130,20 +183,27 @@ reg_dcdc1: dcdc1 {
+ 				regulator-min-microvolt = <810000>;
+ 				regulator-max-microvolt = <990000>;
+ 				regulator-name = "vdd-gpu-sys";
++				regulator-step-delay-us = <25>;
++				regulator-final-delay-us = <50>;
+ 			};
+ 
+ 			reg_dcdc2: dcdc2 {
+ 				regulator-always-on;
+ 				regulator-min-microvolt = <810000>;
+ 				regulator-max-microvolt = <1100000>;
+ 				regulator-name = "vdd-cpu";
++				regulator-step-delay-us = <25>;
++				regulator-final-delay-us = <50>;
++				regulator-ramp-delay = <200>;
+ 			};
+ 
+ 			reg_dcdc3: dcdc3 {
+ 				regulator-always-on;
+ 				regulator-min-microvolt = <1100000>;
+ 				regulator-max-microvolt = <1100000>;
+ 				regulator-name = "vdd-dram";
++				regulator-step-delay-us = <25>;
++				regulator-final-delay-us = <50>;
+			};
+		};
+	};
